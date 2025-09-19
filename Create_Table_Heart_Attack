@@ -1,0 +1,46 @@
+CREATE TABLE heart_attack_pred(
+    age INT,
+    gender VARCHAR(255),
+    cholesterol INT,
+    blood_pressure INT,
+    heart_rate INT,
+    bmi REAL,
+    smoker INT,
+    diabetes INT,
+    hypertension INT,
+    family_history INT,
+    physical_activity INT,
+    alcohol_consumption INT,
+    diet VARCHAR(255),
+    stress_level INT,
+    ethnicity VARCHAR(255),
+    income INT,
+    education_level VARCHAR(255),
+    medication TEXT,
+    chest_pain_type VARCHAR(255),
+    ecg_results VARCHAR(255),
+    max_heart_rate INT,
+    st_depression REAL,
+    exercise_induced_angina TEXT,
+    slope VARCHAR(255),
+    num_major_vessels INT,
+    thalassemia VARCHAR(255),
+    previous_ha INT,
+    stroke_history INT,
+    residence VARCHAR(255),
+    employment_status VARCHAR(255),
+    marital_status VARCHAR(255),
+    outcome VARCHAR(255)
+);
+
+COPY heart_attack_pred
+FROM '/Users/centauress/Desktop/heart_attack_project/heart_attack_dataset.csv'
+WITH (FORMAT csv, HEADER true, DELIMITER ',', ENCODING 'UTF8');
+
+\copy heart_attack_pred FROM '/Users/centauress/Desktop/heart_attack_project/heart_attack_dataset.csv' WITH (FORMAT csv, HEADER true, DELIMITER ',', ENCODING 'UTF8');
+
+
+SELECT *
+FROM heart_attack_pred
+LIMIT 10;
+
