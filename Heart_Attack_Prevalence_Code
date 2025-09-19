@@ -1,0 +1,192 @@
+
+--1A) Average cholesterol, minimum blood pressure, and maximum blood pressure
+SELECT ROUND(AVG(cholesterol),2) AS avg_chol, 
+    MIN(blood_pressure) AS min_bp, 
+    MAX(blood_pressure) AS max_bp
+FROM heart_attack_pred
+
+--2A) Average age of patients with a heart attack vs. without
+SELECT previous_ha, 
+    ROUND(AVG(age),2) AS avg_age
+FROM heart_attack_pred
+GROUP BY previous_ha
+
+--2B) Percentage of male vs. female patients with heart attacks
+--Removed percentage to show correct numbers in Tableau
+SELECT gender,
+    ROUND(COUNT(*)/SUM(COUNT(*)) OVER (), 4) AS percentage_of_ha
+FROM heart_attack_pred
+WHERE previous_ha = 1
+GROUP BY gender
+ORDER BY percentage_of_ha DESC 
+
+
+-- 2C) Which age group has the highest heart attack rate?
+SELECT CASE 
+    WHEN age BETWEEN 30 AND 39 THEN '30-39'
+    WHEN age BETWEEN 40 and 49 THEN '40-49'
+    WHEN age BETWEEN 50 AND 59 THEN '50-59'
+    WHEN age BETWEEN 60 AND 69 THEN '60-69'
+    WHEN age BETWEEN 70 AND 79 THEN '70-79'
+    WHEN age BETWEEN 80 AND 89 THEN '80-89'
+    ELSE 'Unknown'
+END AS age_group,
+    COUNT(*) AS patients,
+    SUM(previous_ha) AS ha_count,
+    ROUND(100*SUM(previous_ha)/COUNT(*),4) AS heart_attack_rate
+FROM heart_attack_pred
+GROUP BY age_group
+ORDER BY heart_attack_rate DESC
+
+ORDER BY heart_attack_rate DESC
+
+--3A) Average cholesterol among patients who had a heart attack vs those who didn't
+SELECT previous_ha, ROUND(AVG(cholesterol),3) AS avg_chol
+FROM heart_attack_pred
+GROUP BY previous_ha
+ORDER BY avg_chol DESC
+
+-- 3B) Among patients with chol > 240, what % experienced a heart attack
+SELECT ROUND(100*AVG(previous_ha),2) AS high_chol_and_ha
+FROM heart_attack_pred
+WHERE cholesterol > 240
+
+-- 3C) What is the avg blood pressure for smokers vs non smokers
+SELECT smoker, 
+    previous_ha,
+    ROUND(AVG(blood_pressure),2) AS avg_bp
+FROM heart_attack_pred
+GROUP BY smoker, previous_ha
+ORDER BY avg_bp DESC
+
+-- 3D)How does each BMI category relate to heart attack prevelance
+WITH bmi_binned AS (
+    SELECT
+    CASE
+        WHEN bmi BETWEEN 18 AND 18.4 THEN 'Underweight'
+        WHEN bmi BETWEEN 18.5 AND 24.9 THEN 'Normal'
+        WHEN bmi BETWEEN 25 AND 29.9 THEN 'Overweight'
+        WHEN bmi BETWEEN 30 AND 40 THEN 'Obese'
+        ELSE 'Unknown'
+    END AS bmi_range,
+    previous_ha
+    FROM heart_attack_pred
+)
+SELECT
+    bmi_range,
+    COUNT(*) AS patients,
+    SUM(previous_ha) AS ha_count,
+    ROUND(100.0 * AVG(previous_ha),2) AS ha_rate
+FROM bmi_binned
+GROUP BY bmi_range
+ORDER BY ha_rate DESC
+
+--4A) Do patients who exercise regularly have a lower heart attack rate
+-- compared to sedentary patients?
+SELECT 
+    CASE
+        WHEN physical_activity BETWEEN 0 AND 5 THEN 'Sedentary'
+        WHEN physical_activity BETWEEN 6 AND 10 THEN 'Active'
+    END AS activity_group,
+    SUM(previous_ha),
+    AVG(previous_ha) AS ha_rate
+FROM heart_attack_pred
+GROUP BY activity_group
+ORDER BY 3 DESC
+
+SELECT COUNT(previous_ha)
+from heart_attack_pred
+
+--4B) Is there a relationship between stress level and heart attack prevelance?
+SELECT stress_level,
+    SUM(previous_ha) AS ha_count,
+    ROUND(AVG(previous_ha),4) as heart_attack_stress
+FROM heart_attack_pred
+GROUP BY stress_level
+ORDER BY stress_level DESC
+
+--4C) How do smoking and alcohol consumption together affect heart attack risk?
+SELECT CASE
+    WHEN smoker = 1 THEN 'Smoker'
+    WHEN smoker = 0 THEN 'Non-Smoker'
+    ELSE 'Unkown'
+    END AS smoking,
+    CASE
+        WHEN alcohol_consumption = 0 THEN 'Non-Drinker'
+        WHEN alcohol_consumption BETWEEN 1 AND 2 THEN 'Moderate Drinker'
+        WHEN alcohol_consumption BETWEEN 3 AND 4 THEN 'Heavy Drinker'
+        ELSE 'Unkown'
+    END AS drinker,
+    COUNT(*) AS total_patients,
+    SUM(previous_ha) AS heart_attack_count,
+    ROUND(avg(previous_ha),4) AS heart_attack_rate
+FROM heart_attack_pred
+GROUP BY smoking, drinker
+ORDER BY heart_attack_rate DESC
+
+
+
+-- 5A) Which age group has the most patients above healthy thresholds (BMI > 30, Blood Pressure > 140)?
+WITH age_grouped AS (
+    SELECT 
+    CASE
+        WHEN age BETWEEN 30 AND 39 THEN '30-39'
+        WHEN age BETWEEN 40 AND 49 THEN '40-49'
+        WHEN age BETWEEN 50 AND 59 THEN '50-59'
+        WHEN age BETWEEN 60 AND 69 THEN '60-69'
+        WHEN age BETWEEN 70 AND 79 THEN '70-79'
+        WHEN age >= 80 THEN '>=80'
+        ELSE 'Under 30'
+    END AS age_group,
+    bmi,
+    blood_pressure,
+    previous_ha,
+    CASE
+        WHEN bmi > 30 THEN 1 ELSE 0 END AS obese_flag,
+    CASE
+        WHEN blood_pressure > 140 THEN 1 ELSE 0 END AS high_bp_flag
+FROM heart_attack_pred
+)
+SELECT 
+    age_group,
+    COUNT(*) AS total_patients,
+    SUM(obese_flag) AS obese_patients,
+    ROUND(AVG(obese_flag),4) AS obese_percent,
+    SUM(high_bp_flag) AS high_bp_patients,
+    ROUND(AVG(high_bp_flag),2) AS high_bp_percent
+FROM age_grouped
+GROUP BY age_group
+ORDER BY age_group
+
+
+select max(cholesterol), min(cholesterol), avg(cholesterol)
+from heart_attack_pred
+
+--5B) Group patients into Low, Medium, and High blood pressure categories, then
+-- calculate the heart attack rate for each group
+WITH bp_buckets AS (
+    SELECT
+    previous_ha,
+    blood_pressure,
+    CASE
+        WHEN blood_pressure < 120 THEN 'Low'
+        WHEN blood_pressure BETWEEN 120 AND 139 THEN 'Medium'
+        WHEN blood_pressure >= 140 THEN 'High'
+        ELSE 'Unknown'
+    END AS bp_category
+FROM heart_attack_pred
+)
+SELECT 
+    bp_category,
+    COUNT(*) AS patients,
+    SUM(previous_ha) AS heart_attacks,
+    ROUND(AVG(previous_ha),4) AS heart_attack_rate
+FROM bp_buckets
+GROUP BY bp_category
+ORDER BY 
+    CASE bp_category
+        WHEN 'Low' THEN 1
+        WHEN 'Medium' THEN 2
+        WHEN 'High' then 3
+        ELSE 4
+    END;
